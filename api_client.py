@@ -53,7 +53,9 @@ class AirLabsAPIClient:
             data = response.json()
 
             if "response" not in data:
-                logger.warning("No 'response' key in API response")
+                logger.warning(f"No 'response' key in API response. Full response: {data}")
+                logger.warning(f"API Key present: {bool(self.api_key)}")
+                logger.warning(f"API Key length: {len(self.api_key) if self.api_key else 0}")
                 return []
 
             logger.info(f"Successfully fetched {len(data['response'])} flights")
