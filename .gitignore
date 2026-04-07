@@ -48,3 +48,4 @@ htmlcov/
 # Artifacts
 *.pyc
 .mypy_cache/
+tests
