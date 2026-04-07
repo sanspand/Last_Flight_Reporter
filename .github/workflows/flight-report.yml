@@ -2,10 +2,10 @@ name: Daily Flight Report
 
 on:
   schedule:
-    # Run at 8 AM EST every day (1 PM UTC)
+    # Run at 8 AM EST every day (convert to UTC: 8 AM EST = 1 PM UTC = 13:00)
     # Cron format: minute hour day month day-of-week
-    - cron: '30 2 * * *'
-  
+    - cron: '0 13 * * *'
+
   # Allow manual trigger from Actions tab
   workflow_dispatch:
 
@@ -43,9 +43,13 @@ jobs:
           python app.py
 
       - name: Upload logs as artifacts
-        if: always()
-        uses: actions/upload-artifact@v3
+        if: always()  # Upload even if the job fails
+        uses: actions/upload-artifact@v4
         with:
           name: flight-report-logs
           path: Project_last_flight/flights.log
           retention-days: 7
+
+      - name: Notify on failure
+        if: failure()
+        run: echo "Flight report failed - check logs in Actions tab"
