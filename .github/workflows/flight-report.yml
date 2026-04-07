@@ -2,9 +2,10 @@ name: Daily Flight Report
 
 on:
   schedule:
-    # Run at 8 AM EST every day (convert to UTC: 8 AM EST = 1 PM UTC = 13:00)
+    # Run at 9:30 PM CDT every day (Dallas time)
+    # CDT is UTC-5, so 9:30 PM CDT = 2:30 AM UTC
     # Cron format: minute hour day month day-of-week
-    - cron: '0 13 * * *'
+    - cron: '30 02 * * *'
 
   # Allow manual trigger from Actions tab
   workflow_dispatch:
