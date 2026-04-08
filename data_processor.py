@@ -6,6 +6,7 @@ Handles filtering, transformation, and formatting of flight data.
 import logging
 from typing import List, Dict, Any
 from config import Config
+from datetime import datetime, timedelta
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +28,39 @@ class FlightDataProcessor:
         """
         self.airlines_filter = airlines_filter or Config.AIRLINES_FILTER
         self.flights_limit = flights_limit or Config.FLIGHTS_LIMIT
+
+    def _is_within_time_window(self, time_string: str) -> bool:
+        """
+        Check if a flight time is within the acceptable window.
+        Only include flights up to 2 AM the next day.
+
+        Args:
+            time_string: Time string in format 'YYYY-MM-DD HH:MM'
+
+        Returns:
+            True if flight is within time window, False otherwise
+        """
+        if not time_string:
+            return False
+
+        try:
+            # Parse the datetime string
+            flight_time = datetime.strptime(time_string, '%Y-%m-%d %H:%M')
+
+            # Get current time
+            now = datetime.now()
+
+            # Define the cutoff time: 2 AM tomorrow
+            tomorrow = now + timedelta(days=1)
+            cutoff = tomorrow.replace(hour=2, minute=0, second=0, microsecond=0)
+
+            # Include flights from yesterday evening up to 2 AM tomorrow
+            return flight_time <= cutoff
+
+        except ValueError:
+            # If we can't parse the time, include it (better to show than hide)
+            logger.warning(f"Could not parse flight time: {time_string}")
+            return True
 
     def process_flights(self, raw_flights: List[Dict[str, Any]]) -> List[Dict[str, str]]:
         """
@@ -61,6 +95,9 @@ class FlightDataProcessor:
             }
 
             processed.append(processed_flight)
+
+        # Filter by time window (today's flights up to 2 AM next day)
+        processed = [flight for flight in processed if self._is_within_time_window(flight["estimated"])]
 
         # Sort by estimated time in descending order
         processed.sort(key=lambda x: x["estimated"] if x["estimated"] else "0000", reverse=True)
