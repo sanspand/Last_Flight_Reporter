@@ -94,7 +94,7 @@ jobs:
 
       - name: Upload logs as artifacts
         if: always()  # Upload even if the job fails
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: flight-report-logs
           path: Project_last_flight/flights.log

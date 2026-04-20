@@ -203,6 +203,109 @@ The modular structure makes it easy to extend:
 - Add API endpoints in `api_client.py`
 - Add notification methods (Slack, Teams) alongside `email_service.py`
 
+## Deployment on Render
+
+This project can be deployed on Render using the included configuration files.
+
+### Prerequisites
+- A Render account (https://render.com)
+- Your GitHub repository with this code
+- All required environment variables configured
+
+### Deployment Steps
+
+1. **Push code to GitHub**
+   ```bash
+   git push origin main
+   ```
+
+2. **Create a new Web Service on Render**
+   - Go to https://dashboard.render.com
+   - Click "New +" → "Web Service"
+   - Connect your GitHub repository
+   - Select the branch to deploy (main, develop, etc.)
+
+3. **Configure the Service**
+   - Name: `last-flight` (or your preferred name)
+   - Environment: `Python 3`
+   - Build Command: `pip install -r requirements.txt`
+   - Start Command: `gunicorn server:app`
+   - Instance Type: Free (or paid based on your needs)
+
+4. **Set Environment Variables**
+   - Click "Environment" in the service settings
+   - Add all required variables from your `.env` file:
+     ```
+     AIRLABS_API_KEY=your_api_key
+     AIRPORT_ICAO=KDAL
+     AIRLINES_FILTER=WN,DL
+     FLIGHTS_LIMIT=10
+     EMAIL_ENABLED=true
+     EMAIL_SENDER=your_email@gmail.com
+     EMAIL_SENDER_PASSWORD=your_app_password
+     EMAIL_RECIPIENT=manager@email.com
+     ```
+
+5. **Deploy**
+   - Click "Create Web Service"
+   - Render will automatically build and deploy your application
+   - Your service will be accessible at `https://last-flight-xxxx.onrender.com`
+
+### Using the API
+
+Once deployed, you can trigger flights from external services:
+
+**Health Check:**
+```bash
+curl https://last-flight-xxxx.onrender.com/health
+```
+
+**Run Flight Report:**
+```bash
+curl -X POST https://last-flight-xxxx.onrender.com/run
+```
+
+**Get Status:**
+```bash
+curl https://last-flight-xxxx.onrender.com/status
+```
+
+### Scheduling with External Cron Services
+
+You can use services like EasyCron or cron-job.org to trigger your deployment:
+
+1. Go to https://cron-job.org or https://easycron.com
+2. Create a new cron job
+3. Set the URL to: `https://last-flight-xxxx.onrender.com/run`
+4. Set the schedule (e.g., daily at 8 AM)
+5. The service will make a POST request to your endpoint
+
+**Example cron-job.org setup:**
+- URL: `https://last-flight-xxxx.onrender.com/run`
+- Method: POST
+- Schedule: Every day at 08:00 AM
+- Notifications: Email on failure (optional)
+
+### Manual Trigger from Local Machine
+
+You can also trigger the service manually:
+```bash
+# Using curl
+curl -X POST https://last-flight-xxxx.onrender.com/run
+
+# Using Python
+import requests
+response = requests.post('https://last-flight-xxxx.onrender.com/run')
+print(response.json())
+```
+
+### Important Notes
+
+- **Free Tier Limitations**: Render's free tier will auto-shutdown after 15 minutes of inactivity. Use the cron service to wake it up before your scheduled run.
+- **Cold Starts**: The first request after shutdown may take 30-60 seconds.
+- **Logs**: View logs in Render's dashboard under "Logs" tab
+- **Render.yaml**: The optional `render.yaml` file in the repository root provides infrastructure-as-code configuration
+
 ## Troubleshooting
 
 ### "AIRLABS_API_KEY is required"
