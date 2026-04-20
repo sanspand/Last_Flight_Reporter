@@ -96,15 +96,15 @@ class EmailService:
         if not flights:
             return "No upcoming flights found."
 
-        lines = ["Last 10 Flights Report\n", "=" * 60]
-        lines.append(f"{'SCH':<10} {'ETA':<18} {'FLIGHT':<10} {'FROM':<6} {'STATUS'}")
-        lines.append("-" * 60)
+        lines = ["LAST 10 FLIGHTS REPORT\n", "=" * 50]
+        lines.append(f"{'SCH':<8} {'ETA':<15} {'FROM':<8} {'STATUS'}")
+        lines.append("-" * 50)
 
         for flight in flights:
             sch = flight["scheduled"][-5:] if flight["scheduled"] else "??:??"
             eta = flight["estimated"][-5:] if flight["estimated"] else "??:??"
             lines.append(
-                f"{sch:<8} {eta:<18} {flight['flight']:<10} {flight['from']:<6} {flight['status']}"
+                f"{sch:<8} {eta:<15} {flight['from']:<8} {flight['status']}"
             )
 
         return "\n".join(lines)
@@ -113,7 +113,7 @@ class EmailService:
     def _format_html_content(flights: List[Dict[str, str]]) -> str:
         """Format flights as HTML for email."""
         if not flights:
-            html_table = "<p>No upcoming flights found.</p>"
+            html_table = "<p style='font-size: 18px; color: #666;'>No upcoming flights found.</p>"
         else:
             html_rows = ""
             for flight in flights:
@@ -121,23 +121,21 @@ class EmailService:
                 eta = flight["estimated"][-5:] if flight["estimated"] else "??:??"
                 html_rows += f"""
                 <tr>
-                    <td style="padding: 8px; border-bottom: 1px solid #ddd; font-family: monospace;">{sch}</td>
-                    <td style="padding: 8px; border-bottom: 1px solid #ddd; font-family: monospace;">{eta}</td>
-                    <td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>{flight['flight']}</strong></td>
-                    <td style="padding: 8px; border-bottom: 1px solid #ddd;">{flight['from']}</td>
-                    <td style="padding: 8px; border-bottom: 1px solid #ddd;">{flight['status']}</td>
+                    <td style="padding: 12px 8px; border-bottom: 1px solid #ddd; font-family: 'Courier New', monospace; font-size: 16px; font-weight: bold;">{sch}</td>
+                    <td style="padding: 12px 8px; border-bottom: 1px solid #ddd; font-family: 'Courier New', monospace; font-size: 16px; font-weight: bold;">{eta}</td>
+                    <td style="padding: 12px 8px; border-bottom: 1px solid #ddd; font-size: 16px; font-weight: bold;">{flight['from']}</td>
+                    <td style="padding: 12px 8px; border-bottom: 1px solid #ddd; font-size: 16px;">{flight['status']}</td>
                 </tr>
                 """
 
             html_table = f"""
-            <table style="border-collapse: collapse; width: 100%; margin: 20px 0;">
+            <table style="border-collapse: collapse; width: 100%; margin: 20px 0; font-family: Arial, sans-serif;">
                 <thead>
-                    <tr style="background-color: #f2f2f2;">
-                        <th style="padding: 8px; text-align: left; border-bottom: 2px solid #333;">Scheduled</th>
-                        <th style="padding: 8px; text-align: left; border-bottom: 2px solid #333;">Estimated</th>
-                        <th style="padding: 8px; text-align: left; border-bottom: 2px solid #333;">Flight</th>
-                        <th style="padding: 8px; text-align: left; border-bottom: 2px solid #333;">From</th>
-                        <th style="padding: 8px; text-align: left; border-bottom: 2px solid #333;">Status</th>
+                    <tr style="background-color: #f8f9fa;">
+                        <th style="padding: 15px 8px; text-align: left; border-bottom: 2px solid #333; font-size: 18px; font-weight: bold; color: #333;">SCH</th>
+                        <th style="padding: 15px 8px; text-align: left; border-bottom: 2px solid #333; font-size: 18px; font-weight: bold; color: #333;">ETA</th>
+                        <th style="padding: 15px 8px; text-align: left; border-bottom: 2px solid #333; font-size: 18px; font-weight: bold; color: #333;">FROM</th>
+                        <th style="padding: 15px 8px; text-align: left; border-bottom: 2px solid #333; font-size: 18px; font-weight: bold; color: #333;">STATUS</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -148,13 +146,21 @@ class EmailService:
 
         html = f"""
         <html>
-            <body style="font-family: Arial, sans-serif; color: #333;">
-                <h2>Last 10 Flights Report - Dallas Love FieldAirport</h2>
-                <p>Here is the latest information about incoming flights:</p>
-                {html_table}
-                <p style="margin-top: 20px; font-size: 12px; color: #666;">
-                    This report was automatically generated. Please contact the system administrator for inquiries.
-                </p>
+            <head>
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            </head>
+            <body style="font-family: Arial, sans-serif; color: #333; margin: 0; padding: 20px; background-color: #f8f9fa;">
+                <div style="max-width: 600px; margin: 0 auto; background-color: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+                    <h1 style="color: #2c3e50; margin-bottom: 10px; font-size: 24px; text-align: center;">✈️ Last 10 Flights Report</h1>
+                    <h2 style="color: #34495e; margin-bottom: 20px; font-size: 18px; text-align: center;">Dallas Love Field Airport</h2>
+                    <p style="font-size: 16px; line-height: 1.5; margin-bottom: 20px;">Here is the latest information about incoming flights:</p>
+                    {html_table}
+                    <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+                    <p style="margin-top: 20px; font-size: 14px; color: #666; text-align: center;">
+                        This report was automatically generated.<br>
+                        Please contact the system administrator for inquiries.
+                    </p>
+                </div>
             </body>
         </html>
         """
