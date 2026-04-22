@@ -32,7 +32,7 @@ class FlightDataProcessor:
     def _is_within_time_window(self, time_string: str) -> bool:
         """
         Check if a flight time is within the acceptable window.
-        Only include flights up to 2 AM the next day.
+        Include flights from now until 3 AM tomorrow.
 
         Args:
             time_string: Time string in format 'YYYY-MM-DD HH:MM'
@@ -50,12 +50,12 @@ class FlightDataProcessor:
             # Get current time
             now = datetime.now()
 
-            # Define the cutoff time: 2 AM tomorrow
+            # Define the cutoff time: 3 AM tomorrow
             tomorrow = now + timedelta(days=1)
-            cutoff = tomorrow.replace(hour=2, minute=0, second=0, microsecond=0)
+            cutoff = tomorrow.replace(hour=3, minute=0, second=0, microsecond=0)
 
-            # Include flights from yesterday evening up to 2 AM tomorrow
-            return flight_time <= cutoff
+            # Include flights from now until 3 AM tomorrow
+            return now <= flight_time <= cutoff
 
         except ValueError:
             # If we can't parse the time, include it (better to show than hide)
