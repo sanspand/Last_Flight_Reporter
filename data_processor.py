@@ -29,13 +29,44 @@ class FlightDataProcessor:
         self.airlines_filter = airlines_filter or Config.AIRLINES_FILTER
         self.flights_limit = flights_limit or Config.FLIGHTS_LIMIT
 
-    def _is_within_time_window(self, time_string: str) -> bool:
+    def _parse_time(self, time_string: str, now: datetime) -> datetime | None:
+        """
+        Parse a flight time string into a datetime.
+
+        Supports both full datetime strings ('YYYY-MM-DD HH:MM') and time-only strings ('HH:MM').
+        For time-only values, this resolves to the next valid occurrence after the current time.
+        """
+        if not time_string:
+            return None
+
+        try:
+            return datetime.strptime(time_string, '%Y-%m-%d %H:%M')
+        except ValueError:
+            pass
+
+        try:
+            parsed_time = datetime.strptime(time_string, '%H:%M').time()
+            candidate = now.replace(
+                hour=parsed_time.hour,
+                minute=parsed_time.minute,
+                second=0,
+                microsecond=0,
+            )
+            if candidate < now:
+                candidate += timedelta(days=1)
+            return candidate
+        except ValueError:
+            logger.warning(f"Could not parse flight time: {time_string}")
+            return None
+
+    def _is_within_time_window(self, time_string: str, now: datetime | None = None) -> bool:
         """
         Check if a flight time is within the acceptable window.
         Include flights from now until 3 AM tomorrow.
 
         Args:
-            time_string: Time string in format 'YYYY-MM-DD HH:MM'
+            time_string: Time string in format 'YYYY-MM-DD HH:MM' or 'HH:MM'
+            now: Optional reference datetime to use for comparisons.
 
         Returns:
             True if flight is within time window, False otherwise
@@ -43,31 +74,24 @@ class FlightDataProcessor:
         if not time_string:
             return False
 
-        try:
-            # Parse the datetime string
-            flight_time = datetime.strptime(time_string, '%Y-%m-%d %H:%M')
+        now = now or datetime.now()
+        tomorrow = now + timedelta(days=1)
+        cutoff = tomorrow.replace(hour=3, minute=0, second=0, microsecond=0)
 
-            # Get current time
-            now = datetime.now()
+        flight_time = self._parse_time(time_string, now)
+        return bool(flight_time and now <= flight_time <= cutoff)
 
-            # Define the cutoff time: 3 AM tomorrow
-            tomorrow = now + timedelta(days=1)
-            cutoff = tomorrow.replace(hour=3, minute=0, second=0, microsecond=0)
-
-            # Include flights from now until 3 AM tomorrow
-            return now <= flight_time <= cutoff
-
-        except ValueError:
-            # If we can't parse the time, include it (better to show than hide)
-            logger.warning(f"Could not parse flight time: {time_string}")
-            return True
-
-    def process_flights(self, raw_flights: List[Dict[str, Any]]) -> List[Dict[str, str]]:
+    def process_flights(
+        self,
+        raw_flights: List[Dict[str, Any]],
+        now: datetime | None = None,
+    ) -> List[Dict[str, str]]:
         """
         Process raw API flight data.
 
         Args:
             raw_flights: List of flight dictionaries from API
+            now: Optional reference time for filtering and sorting
 
         Returns:
             List of processed flight dictionaries
@@ -81,8 +105,9 @@ class FlightDataProcessor:
                 continue
 
             # Extract and prioritize times
-            # 1. 'arr_estimated' (The live revised time)
-            # 2. 'arr_time' (The original scheduled time)
+            # 1. 'arr_estimated' (the live revised time)
+            # 2. 'arr_actual' (the actual arrival time)
+            # 3. 'arr_time' (the original scheduled time)
             eta = flight.get("arr_estimated") or flight.get("arr_time")
             scheduled = flight.get("arr_actual") or flight.get("arr_time")
 
@@ -96,18 +121,31 @@ class FlightDataProcessor:
 
             processed.append(processed_flight)
 
-        # Filter by time window (today's flights up to 2 AM next day)
-        processed = [flight for flight in processed if self._is_within_time_window(flight["estimated"])]
+        now = now or datetime.now()
+        # Filter by time window using either estimated or scheduled time,
+        # then sort in descending order and apply the configured limit.
+        processed = [
+            flight
+            for flight in processed
+            if self._is_within_time_window(flight["estimated"] or flight["scheduled"], now=now)
+        ]
 
-        # Sort by estimated time in descending order
-        processed.sort(key=lambda x: x["estimated"] if x["estimated"] else "0000", reverse=True)
+        processed.sort(key=self._flight_sort_key, reverse=True)
 
-        # Limit results
         if self.flights_limit:
             processed = processed[: self.flights_limit]
 
         logger.info(f"Processed {len(processed)} flights after filtering")
         return processed
+
+    def _flight_sort_key(self, flight: Dict[str, str]) -> datetime:
+        """
+        Build a sorting key from the flight's estimated or scheduled time.
+        """
+        now = datetime.now()
+        time_string = flight.get("estimated") or flight.get("scheduled") or ""
+        parsed = self._parse_time(time_string, now)
+        return parsed if parsed else datetime.min
 
     @staticmethod
     def format_time(time_string: str) -> str:
@@ -115,14 +153,19 @@ class FlightDataProcessor:
         Extract time portion from datetime string.
 
         Args:
-            time_string: Full datetime string (e.g., '2026-04-06 23:45')
+            time_string: Full datetime string (e.g., '2026-04-06 23:45') or time-only string ('23:45')
 
         Returns:
             Formatted time string (e.g., '23:45')
         """
         if not time_string:
             return "??:??"
-        return time_string[-5:] if len(time_string) >= 5 else time_string
+
+        formatted = time_string[-5:]
+        if len(formatted) == 5 and formatted[2] == ":" and formatted[:2].isdigit() and formatted[3:].isdigit():
+            return formatted
+
+        return time_string
 
     def format_flights_for_display(self, flights: List[Dict[str, str]]) -> str:
         """
