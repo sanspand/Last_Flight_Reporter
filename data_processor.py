@@ -6,7 +6,7 @@ Handles filtering, transformation, and formatting of flight data.
 import logging
 from typing import List, Dict, Any
 from config import Config
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time
 
 logger = logging.getLogger(__name__)
 
@@ -77,7 +77,7 @@ class FlightDataProcessor:
         now = now or datetime.now()
         tomorrow = now + timedelta(days=1)
         cutoff = tomorrow.replace(hour=3, minute=0, second=0, microsecond=0)
-
+       
         flight_time = self._parse_time(time_string, now)
         return bool(flight_time and now <= flight_time <= cutoff)
 

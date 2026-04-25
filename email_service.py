@@ -9,6 +9,7 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from typing import List, Dict
 from config import Config
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -115,6 +116,7 @@ class EmailService:
         if not flights:
             html_table = "<p style='font-size: 18px; color: #666;'>No upcoming flights found.</p>"
         else:
+            logger.info(f"time _milan asked {datetime.now()}")
             html_rows = ""
             for flight in flights:
                 sch = flight["scheduled"][-5:] if flight["scheduled"] else "??:??"
