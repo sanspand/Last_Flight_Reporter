@@ -19,13 +19,12 @@ class Config:
     AIRLINES_FILTER = os.getenv("AIRLINES_FILTER", "WN,DL").split(",")
     FLIGHTS_LIMIT = int(os.getenv("FLIGHTS_LIMIT", "10"))
 
-    # Email Configuration
+    # Email Configuration (Brevo)
     EMAIL_ENABLED = os.getenv("EMAIL_ENABLED", "False").lower() == "true"
+    BREVO_API_KEY = os.getenv("BREVO_API_KEY", "")
     EMAIL_SENDER = os.getenv("EMAIL_SENDER", "")
-    EMAIL_SENDER_PASSWORD = os.getenv("EMAIL_SENDER_PASSWORD", "")
+    EMAIL_SENDER_NAME = os.getenv("EMAIL_SENDER_NAME", "Last Flight Bot")
     EMAIL_RECIPIENT = os.getenv("EMAIL_RECIPIENT", "")
-    EMAIL_SMTP_SERVER = os.getenv("EMAIL_SMTP_SERVER", "smtp.gmail.com")
-    EMAIL_SMTP_PORT = int(os.getenv("EMAIL_SMTP_PORT", "587"))
 
     # Logging Configuration
     LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
@@ -39,8 +38,8 @@ class Config:
 
         if cls.EMAIL_ENABLED:
             required_email_fields = [
+                "BREVO_API_KEY",
                 "EMAIL_SENDER",
-                "EMAIL_SENDER_PASSWORD",
                 "EMAIL_RECIPIENT",
             ]
             missing = [field for field in required_email_fields if not getattr(cls, field)]

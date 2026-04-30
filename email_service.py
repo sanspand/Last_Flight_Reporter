@@ -1,48 +1,51 @@
 """
 Email service module for sending flight information to managers.
-Supports Gmail SMTP with configurable settings.
+Supports Brevo API for email delivery.
 """
 
-import smtplib
+import requests
 import logging
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
 from typing import List, Dict
 from config import Config
 from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
+# Brevo API endpoint
+BREVO_API_URL = "https://api.brevo.com/v3/smtp/email"
+
 
 class EmailService:
-    """Service for sending emails with flight information."""
+    """Service for sending emails with flight information using Brevo API."""
 
     def __init__(
         self,
+        api_key: str,
         sender_email: str,
-        sender_password: str,
-        smtp_server: str = "smtp.gmail.com",
-        smtp_port: int = 587,
+        sender_name: str = "Last Flight Bot",
     ):
         """
-        Initialize the email service.
+        Initialize the Brevo email service.
 
         Args:
-            sender_email: Email address to send from
-            sender_password: Password or app-specific password
-            smtp_server: SMTP server address
-            smtp_port: SMTP server port
+            api_key: Brevo API key
+            sender_email: Email address to send from (must be verified in Brevo)
+            sender_name: Display name for the sender
         """
+        self.api_key = api_key
         self.sender_email = sender_email
-        self.sender_password = sender_password
-        self.smtp_server = smtp_server
-        self.smtp_port = smtp_port
+        self.sender_name = sender_name
+        self.headers = {
+            "accept": "application/json",
+            "content-type": "application/json",
+            "api-key": self.api_key,
+        }
 
     def send_flight_report(
         self, recipient_email: str, flights: List[Dict[str, str]], subject: str = None
     ) -> bool:
         """
-        Send flight information via email.
+        Send flight information via email using Brevo API.
 
         Args:
             recipient_email: Email address to send to
@@ -56,36 +59,33 @@ class EmailService:
             subject = "Last 10 Flights Report - Dallas Airport"
 
         try:
-            # Create email message
-            message = MIMEMultipart("alternative")
-            message["Subject"] = subject
-            message["From"] = self.sender_email
-            message["To"] = recipient_email
-
             # Create plain text and HTML versions
             text_content = self._format_text_content(flights)
             html_content = self._format_html_content(flights)
 
-            message.attach(MIMEText(text_content, "plain"))
-            message.attach(MIMEText(html_content, "html"))
+            # Prepare Brevo API request payload
+            payload = {
+                "sender": {"name": self.sender_name, "email": self.sender_email},
+                "to": [{"email": recipient_email}],
+                "subject": subject,
+                "textContent": text_content,
+                "htmlContent": html_content,
+            }
 
-            # Send email
-            logger.info(f"Connecting to {self.smtp_server}:{self.smtp_port}...")
-            with smtplib.SMTP(self.smtp_server, self.smtp_port) as server:
-                server.starttls()
-                logger.info("Logging in to email account...")
-                server.login(self.sender_email, self.sender_password)
-                logger.info(f"Sending email to {recipient_email}...")
-                server.send_message(message)
+            logger.info(f"Sending email to {recipient_email} via Brevo API...")
+            response = requests.post(BREVO_API_URL, json=payload, headers=self.headers)
 
-            logger.info("Email sent successfully")
-            return True
+            if response.status_code == 201:
+                logger.info("Email sent successfully via Brevo")
+                return True
+            else:
+                logger.error(
+                    f"Brevo API error: Status {response.status_code} - {response.text}"
+                )
+                return False
 
-        except smtplib.SMTPAuthenticationError:
-            logger.error("Email authentication failed. Check sender email and password.")
-            return False
-        except smtplib.SMTPException as e:
-            logger.error(f"SMTP error occurred: {e}")
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Request error occurred: {e}")
             return False
         except Exception as e:
             logger.error(f"Failed to send email: {e}")
@@ -184,10 +184,9 @@ def send_flights_email(flights: List[Dict[str, str]]) -> bool:
         return False
 
     service = EmailService(
+        api_key=Config.BREVO_API_KEY,
         sender_email=Config.EMAIL_SENDER,
-        sender_password=Config.EMAIL_SENDER_PASSWORD,
-        smtp_server=Config.EMAIL_SMTP_SERVER,
-        smtp_port=Config.EMAIL_SMTP_PORT,
+        sender_name=Config.EMAIL_SENDER_NAME,
     )
 
     return service.send_flight_report(Config.EMAIL_RECIPIENT, flights)
