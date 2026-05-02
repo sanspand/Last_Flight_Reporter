@@ -19,6 +19,9 @@ class Config:
     AIRLINES_FILTER = os.getenv("AIRLINES_FILTER", "WN,DL").split(",")
     FLIGHTS_LIMIT = int(os.getenv("FLIGHTS_LIMIT", "10"))
 
+    # Run ID for Authentication
+    RUN_ID = os.getenv("RUN_ID", "")
+
     # Email Configuration (Brevo)
     EMAIL_ENABLED = os.getenv("EMAIL_ENABLED", "False").lower() == "true"
     BREVO_API_KEY = os.getenv("BREVO_API_KEY", "")

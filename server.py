@@ -48,6 +48,12 @@ def run_flights():
     Can be called from cron jobs or external services.
     """
     try:
+        # Check authentication key
+        provided_key = request.args.get('id')
+        if provided_key != Config.RUN_ID:
+            logger.warning("Unauthorized access attempt to /run endpoint")
+            return jsonify({"error": "Unauthorized"}), 403
+        
         logger.info("Flight retrieval triggered")
         
         # Validate configuration
