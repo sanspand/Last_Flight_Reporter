@@ -73,7 +73,9 @@ class EmailService:
             }
 
             logger.info(f"Sending email to {recipient_email} via Brevo API...")
-            response = requests.post(BREVO_API_URL, json=payload, headers=self.headers)
+            response = requests.post(
+                BREVO_API_URL, json=payload, headers=self.headers, timeout=15
+            )
 
             if response.status_code == 201:
                 logger.info("Email sent successfully via Brevo")

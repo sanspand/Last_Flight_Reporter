@@ -4,6 +4,7 @@
 .env.*.local
 
 # Python
+.venv/
 __pycache__/
 *.py[cod]
 *$py.class
@@ -46,6 +47,7 @@ flights.log
 htmlcov/
 
 # Artifacts
+.vercel/
 *.pyc
 .mypy_cache/
 tests

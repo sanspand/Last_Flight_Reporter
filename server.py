@@ -20,13 +20,15 @@ app = Flask(__name__)
 # Setup logging
 def setup_logging():
     """Configure logging for the application."""
+    handlers = [logging.StreamHandler(sys.stdout)]
+    # Vercel captures stdout; the deployed application directory is read-only.
+    if not os.getenv("VERCEL"):
+        handlers.insert(0, logging.FileHandler(Config.LOG_FILE))
+
     logging.basicConfig(
         level=Config.LOG_LEVEL,
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        handlers=[
-            logging.FileHandler(Config.LOG_FILE),
-            logging.StreamHandler(sys.stdout),
-        ],
+        handlers=handlers,
     )
     return logging.getLogger(__name__)
 
@@ -50,7 +52,7 @@ def run_flights():
     try:
         # Check authentication key
         provided_key = request.args.get('id')
-        if provided_key != Config.RUN_ID:
+        if not Config.RUN_ID or provided_key != Config.RUN_ID:
             logger.warning("Unauthorized access attempt to /run endpoint")
             return jsonify({"error": "Unauthorized"}), 403
         

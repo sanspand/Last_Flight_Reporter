@@ -203,6 +203,12 @@ The modular structure makes it easy to extend:
 - Add API endpoints in `api_client.py`
 - Add notification methods (Slack, Teams) alongside `email_service.py`
 
+## Deployment on Vercel
+
+For Vercel, follow [the Vercel deployment guide](VERCEL_DEPLOYMENT.md). It covers
+the Flask preset, required environment variables (including the current Brevo
+email settings), and endpoint verification.
+
 ## Deployment on Render
 
 This project can be deployed on Render using the included configuration files.
