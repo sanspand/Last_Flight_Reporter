@@ -12,6 +12,7 @@ Configuration is managed via environment variables (see .env.example)
 import logging
 import sys
 from config import Config
+from app_time import LocalTimeFormatter
 from api_client import get_flights_from_api
 from data_processor import FlightDataProcessor
 from email_service import send_flights_email
@@ -19,13 +20,14 @@ from email_service import send_flights_email
 
 def setup_logging():
     """Configure logging for the application."""
+    handlers = [logging.FileHandler(Config.LOG_FILE), logging.StreamHandler(sys.stdout)]
+    formatter = LocalTimeFormatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+    for handler in handlers:
+        handler.setFormatter(formatter)
     logging.basicConfig(
         level=Config.LOG_LEVEL,
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        handlers=[
-            logging.FileHandler(Config.LOG_FILE),
-            logging.StreamHandler(sys.stdout),
-        ],
+        handlers=handlers,
     )
     logger = logging.getLogger(__name__)
     return logger

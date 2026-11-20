@@ -6,7 +6,8 @@ Handles filtering, transformation, and formatting of flight data.
 import logging
 from typing import List, Dict, Any
 from config import Config
-from datetime import datetime, timedelta, time
+from datetime import datetime, timedelta, timezone
+from app_time import local_reference
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +41,10 @@ class FlightDataProcessor:
             return None
 
         try:
-            return datetime.strptime(time_string, '%Y-%m-%d %H:%M')
+            # AirLabs' bare arrival fields are already airport-local time.
+            return datetime.strptime(time_string, '%Y-%m-%d %H:%M').replace(
+                tzinfo=Config.TIMEZONE
+            )
         except ValueError:
             pass
 
@@ -74,12 +78,17 @@ class FlightDataProcessor:
         if not time_string:
             return False
 
-        now = now or datetime.now()
+        now = local_reference(now)
         tomorrow = now + timedelta(days=1)
         cutoff = tomorrow.replace(hour=3, minute=0, second=0, microsecond=0)
        
         flight_time = self._parse_time(time_string, now)
-        return bool(flight_time and now <= flight_time <= cutoff)
+        return bool(
+            flight_time
+            and now.astimezone(timezone.utc)
+            <= flight_time.astimezone(timezone.utc)
+            <= cutoff.astimezone(timezone.utc)
+        )
 
     def process_flights(
         self,
@@ -121,7 +130,7 @@ class FlightDataProcessor:
 
             processed.append(processed_flight)
 
-        now = now or datetime.now()
+        now = local_reference(now)
         # Filter by time window using either estimated or scheduled time,
         # then sort in descending order and apply the configured limit.
         processed = [
@@ -130,7 +139,7 @@ class FlightDataProcessor:
             if self._is_within_time_window(flight["estimated"] or flight["scheduled"], now=now)
         ]
 
-        processed.sort(key=self._flight_sort_key, reverse=True)
+        processed.sort(key=lambda flight: self._flight_sort_key(flight, now), reverse=True)
 
         if self.flights_limit:
             processed = processed[: self.flights_limit]
@@ -138,14 +147,14 @@ class FlightDataProcessor:
         logger.info(f"Processed {len(processed)} flights after filtering")
         return processed
 
-    def _flight_sort_key(self, flight: Dict[str, str]) -> datetime:
+    def _flight_sort_key(self, flight: Dict[str, str], now: datetime | None = None) -> datetime:
         """
         Build a sorting key from the flight's estimated or scheduled time.
         """
-        now = datetime.now()
+        now = local_reference(now)
         time_string = flight.get("estimated") or flight.get("scheduled") or ""
         parsed = self._parse_time(time_string, now)
-        return parsed if parsed else datetime.min
+        return parsed.astimezone(timezone.utc) if parsed else datetime.min.replace(tzinfo=timezone.utc)
 
     @staticmethod
     def format_time(time_string: str) -> str:

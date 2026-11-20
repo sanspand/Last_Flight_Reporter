@@ -6,12 +6,15 @@ Run with: pytest tests/
 import sys
 import os
 from pathlib import Path
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+from unittest.mock import patch
 
 # Add parent directory to path so we can import modules
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from data_processor import FlightDataProcessor
+from app_time import local_reference, LocalTimeFormatter
+import logging
 
 
 def test_format_time():
@@ -196,6 +199,49 @@ def test_format_flights_for_email():
     assert "LAX" in result
     assert "14:30" in result
     assert "landed" in result
+
+
+def test_chicago_offset_tracks_daylight_saving():
+    winter = local_reference(datetime(2026, 1, 15, 18, tzinfo=timezone.utc))
+    summer = local_reference(datetime(2026, 7, 15, 18, tzinfo=timezone.utc))
+    assert (winter.hour, winter.utcoffset()) == (12, timedelta(hours=-6))
+    assert (summer.hour, summer.utcoffset()) == (13, timedelta(hours=-5))
+
+
+def test_local_cutoff_with_utc_clock_and_dst_transitions():
+    processor = FlightDataProcessor()
+    # Each UTC instant falls at 9:30 PM on the previous Chicago calendar day.
+    for utc_now, local_date, next_date in [
+        (datetime(2026, 1, 16, 3, 30, tzinfo=timezone.utc), "2026-01-15", "2026-01-16"),
+        (datetime(2026, 7, 16, 2, 30, tzinfo=timezone.utc), "2026-07-15", "2026-07-16"),
+        (datetime(2026, 3, 8, 3, 30, tzinfo=timezone.utc), "2026-03-07", "2026-03-08"),
+        (datetime(2026, 11, 1, 2, 30, tzinfo=timezone.utc), "2026-10-31", "2026-11-01"),
+    ]:
+        with patch("app_time.local_now", return_value=local_reference(utc_now)):
+            assert not processor._is_within_time_window(f"{local_date} 21:00")
+            assert processor._is_within_time_window(f"{local_date} 22:00")
+            assert processor._is_within_time_window(f"{next_date} 03:00")
+            assert not processor._is_within_time_window(f"{next_date} 03:01")
+        assert processor._is_within_time_window(f"{local_date} 22:00", now=utc_now)
+
+
+def test_time_only_sorting_uses_same_reference_as_filtering():
+    processor = FlightDataProcessor()
+    flights = [
+        {"flight_iata": "LATE", "airline_iata": "WN", "arr_time": "00:30"},
+        {"flight_iata": "EARLY", "airline_iata": "WN", "arr_time": "23:00"},
+    ]
+    result = processor.process_flights(flights, now=datetime(2026, 1, 15, 21, 30))
+    assert [flight["flight"] for flight in result] == ["LATE", "EARLY"]
+
+
+def test_logs_include_chicago_time_and_offset():
+    record = logging.LogRecord("test", logging.INFO, __file__, 1, "message", (), None)
+    formatter = LocalTimeFormatter("%(asctime)s %(message)s")
+    record.created = datetime(2026, 1, 15, 18, tzinfo=timezone.utc).timestamp()
+    assert "2026-01-15 12:00:00 CST-0600" in formatter.format(record)
+    record.created = datetime(2026, 7, 15, 18, tzinfo=timezone.utc).timestamp()
+    assert "2026-07-15 13:00:00 CDT-0500" in formatter.format(record)
 
 
 if __name__ == "__main__":

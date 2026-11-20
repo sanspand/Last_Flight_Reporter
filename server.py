@@ -10,6 +10,7 @@ import sys
 import os
 from flask import Flask, jsonify, request
 from config import Config
+from app_time import LocalTimeFormatter, local_now
 from api_client import get_flights_from_api
 from data_processor import FlightDataProcessor
 from email_service import send_flights_email
@@ -24,6 +25,10 @@ def setup_logging():
     # Vercel captures stdout; the deployed application directory is read-only.
     if not os.getenv("VERCEL"):
         handlers.insert(0, logging.FileHandler(Config.LOG_FILE))
+
+    formatter = LocalTimeFormatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+    for handler in handlers:
+        handler.setFormatter(formatter)
 
     logging.basicConfig(
         level=Config.LOG_LEVEL,
@@ -122,6 +127,8 @@ def status():
         return jsonify({
             "status": "running",
             "service": "Last Flight API",
+            "timezone": Config.APP_TIMEZONE,
+            "local_time": local_now().isoformat(),
             "airport": Config.AIRPORT_ICAO,
             "email_enabled": Config.EMAIL_ENABLED,
             "flights_limit": Config.FLIGHTS_LIMIT,

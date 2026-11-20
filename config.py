@@ -4,6 +4,7 @@ Loads settings from environment variables with sensible defaults.
 """
 
 import os
+from zoneinfo import ZoneInfo
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
@@ -18,6 +19,9 @@ class Config:
     AIRPORT_ICAO = os.getenv("AIRPORT_ICAO", "KDAL")
     AIRLINES_FILTER = os.getenv("AIRLINES_FILTER", "WN,DL").split(",")
     FLIGHTS_LIMIT = int(os.getenv("FLIGHTS_LIMIT", "10"))
+    # Match the arrival airport's timezone (KDAL uses America/Chicago).
+    APP_TIMEZONE = os.getenv("APP_TIMEZONE", "America/Chicago")
+    TIMEZONE = ZoneInfo(APP_TIMEZONE)
 
     # Run ID for Authentication
     RUN_ID = os.getenv("RUN_ID", "")

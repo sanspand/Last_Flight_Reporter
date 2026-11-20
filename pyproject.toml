@@ -8,6 +8,7 @@ dependencies = [
     "python-dotenv==1.0.0",
     "Flask==3.0.0",
     "Gunicorn==21.2.0",
+    "tzdata>=2025.2",
 ]
 
 [tool.uv]

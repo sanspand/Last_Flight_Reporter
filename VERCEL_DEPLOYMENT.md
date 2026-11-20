@@ -29,6 +29,7 @@ used for local and Render installs.
 | `AIRPORT_ICAO` | Optional; defaults to `KDAL`. |
 | `AIRLINES_FILTER` | Optional; defaults to `WN,DL`. |
 | `FLIGHTS_LIMIT` | Optional; defaults to `10`. |
+| `APP_TIMEZONE` | Optional; defaults to `America/Chicago`, including CST/CDT changes. Match the arrival airport. |
 | `EMAIL_ENABLED` | `False` initially; use `True` to send reports. |
 | `BREVO_API_KEY` | Required when email is enabled. |
 | `EMAIL_SENDER` | Required when email is enabled; a verified Brevo sender. |
@@ -38,6 +39,13 @@ used for local and Render installs.
 
 Use `.env.example` as the settings reference. Local `.env` files are excluded
 from deployment. Redeploy after changing Vercel environment variables.
+
+Flight filtering (including the 3 AM cutoff) and application log timestamps use
+`APP_TIMEZONE`, independently of the server's system timezone. AirLabs arrival
+fields are already in airport local time and are not shifted again. `/status`
+includes `timezone` and `local_time` with a UTC offset for verification.
+This setting does not change scheduler cron expressions or timestamps added by
+the hosting platform itself.
 
 ## Endpoints
 
