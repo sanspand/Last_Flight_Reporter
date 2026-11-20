@@ -1,3 +1,17 @@
-# Runtime dependencies remain in requirements.txt.
+[project]
+name = "last-flight-reporter"
+version = "0.1.0"
+requires-python = ">=3.12"
+# Keep these pins in sync with requirements.txt for local and Render installs.
+dependencies = [
+    "requests==2.31.0",
+    "python-dotenv==1.0.0",
+    "Flask==3.0.0",
+    "Gunicorn==21.2.0",
+]
+
+[tool.uv]
+package = false
+
 [tool.vercel]
 entrypoint = "server:app"

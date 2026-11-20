@@ -3,7 +3,9 @@
 This repository deploys as a Flask API. `pyproject.toml` explicitly selects
 `server:app`, while `app.py` remains the command-line flight reporter.
 `vercel.json` selects Flask and allows requests to run for up to 60 seconds.
-`.python-version` selects Python 3.12; dependencies come from `requirements.txt`.
+`.python-version` selects Python 3.12. Vercel installs the dependencies declared
+in `pyproject.toml`; keep their pins in sync with `requirements.txt`, which is
+used for local and Render installs.
 
 ## Deploy from Git
 
